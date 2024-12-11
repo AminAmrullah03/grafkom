@@ -3,11 +3,12 @@ import cairo
 import numpy as np
 import random
 
+# Game settings
 GAME_WIDTH = 700
 GAME_HEIGHT = 700
-SPEED = 200
+SPEED = 5
 SPACE_SIZE = 25
-SNAKE_COLORS = [(0, 255, 0), (0, 0, 255)]  # Hijau Player 1, Biru Player 2
+SNAKE_COLORS = [(0, 255, 0), (0, 0, 255)]  #Player 1, Player 2
 FOOD_COLOR = (255, 0, 0)  
 BACKGROUND_COLOR = (0, 0, 0)
 
@@ -43,13 +44,13 @@ class Snake:
 
     def check_collision(self, other_snake):
         head = self.body[0]
-        # untuk collision dengan wall
+        # collision dengan tepi
         if head[0] < 0 or head[0] >= GAME_WIDTH or head[1] < 0 or head[1] >= GAME_HEIGHT:
             return True
-        # untuk collision dengan tubuhnya sendiri
+        # collision dengan badan
         if head in self.body[1:]:
             return True
-        # untuk collision snake lain
+        # collision dengan ular lain
         if head in other_snake.body:
             return True
         return False
@@ -81,22 +82,30 @@ def main():
     pygame.display.set_caption("Snake PvP")
     clock = pygame.time.Clock()
 
+    def reset_game():
+        return Snake(SNAKE_COLORS[0], GAME_WIDTH // 4, GAME_HEIGHT // 2), \
+               Snake(SNAKE_COLORS[1], 3 * GAME_WIDTH // 4, GAME_HEIGHT // 2), \
+               Food(), True, None
+
+    running = True
+    snake1, snake2, food, paused, winner = reset_game()
+
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, GAME_WIDTH, GAME_HEIGHT)
     ctx = cairo.Context(surface)
 
-    snake1 = Snake(SNAKE_COLORS[0], GAME_WIDTH // 4, GAME_HEIGHT // 2)
-    snake2 = Snake(SNAKE_COLORS[1], 3 * GAME_WIDTH // 4, GAME_HEIGHT // 2)
-    food = Food()
-
-    running = True
-    winner = None
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
 
             if event.type == pygame.KEYDOWN:
-                # Player 1 control
+                if paused and event.key == pygame.K_SPACE:
+                    if winner:
+                        snake1, snake2, food, paused, winner = reset_game()
+                    else:
+                        paused = False
+
+                # Player 1 
                 if event.key == pygame.K_w and snake1.direction != "down":
                     snake1.direction = "up"
                 if event.key == pygame.K_s and snake1.direction != "up":
@@ -105,7 +114,7 @@ def main():
                     snake1.direction = "left"
                 if event.key == pygame.K_d and snake1.direction != "left":
                     snake1.direction = "right"
-                # Player 2 control
+                # Player 2 
                 if event.key == pygame.K_UP and snake2.direction != "down":
                     snake2.direction = "up"
                 if event.key == pygame.K_DOWN and snake2.direction != "up":
@@ -115,10 +124,18 @@ def main():
                 if event.key == pygame.K_RIGHT and snake2.direction != "left":
                     snake2.direction = "right"
 
+        if paused:
+            screen.fill(BACKGROUND_COLOR)
+            font = pygame.font.SysFont("calibri", 40)
+            text = font.render("Tekan SPASI Untuk Start" if not winner else f"{winner} Wins!", True, (255, 255, 255))
+            screen.blit(text, (GAME_WIDTH // 2 - text.get_width() // 2, GAME_HEIGHT // 2 - text.get_height() // 2))
+            pygame.display.flip()
+            clock.tick(60)
+            continue
+
         snake1.move()
         snake2.move()
 
-        # memakan titik
         if snake1.body[0] == food.position:
             snake1.grow()
             food = Food()
@@ -126,41 +143,32 @@ def main():
             snake2.grow()
             food = Food()
 
-        # jika terjadi collision
         if snake1.check_collision(snake2):
             winner = "Player 2"
-            running = False
+            paused = True
         if snake2.check_collision(snake1):
             winner = "Player 1"
-            running = False
+            paused = True
 
+        # Clear canvas
         ctx.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT)
         ctx.set_source_rgb(*[c / 255 for c in BACKGROUND_COLOR])
         ctx.fill()
 
-        # membuat snake dan food
         food.draw(ctx)
         snake1.draw(ctx)
         snake2.draw(ctx)
 
-        # mengconvert ARGB32 ke RGB24 karena terjadi eror
+        # Convert ARGB32 ke RGB24 karena ada masalah di pewarnaan
         buffer = surface.get_data()
         img_array = np.frombuffer(buffer, np.uint8).reshape((GAME_HEIGHT, GAME_WIDTH, 4))
-        img_rgb = img_array[:, :, [2, 1, 0]]
+        img_rgb = img_array[:, :, [2, 1, 0]]  # Swap chanel R dan B
 
         pygame_surface = pygame.image.frombuffer(img_rgb.tobytes(), (GAME_WIDTH, GAME_HEIGHT), "RGB")
         screen.blit(pygame_surface, (0, 0))
         pygame.display.flip()
-
-        clock.tick(1000 // SPEED)
-
-    # Menampilkan winner
-    screen.fill((0, 0, 0))
-    font = pygame.font.SysFont("consolas", 50)
-    text = font.render(f"{winner} Wins!", True, (255, 255, 255))
-    screen.blit(text, (GAME_WIDTH // 2 - text.get_width() // 2, GAME_HEIGHT // 2 - text.get_height() // 2))
-    pygame.display.flip()
-    pygame.time.wait(3000)
+        fps = SPEED
+        clock.tick(fps)
 
     pygame.quit()
 
