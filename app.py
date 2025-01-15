@@ -7,11 +7,10 @@ import random
 GAME_WIDTH = 700
 GAME_HEIGHT = 700
 SPEED = 5
-SPACE_SIZE = 25
+BODY_SNAKE = 25
 SNAKE_COLORS = [(0, 255, 0), (0, 0, 255)]  #Player 1, Player 2
 FOOD_COLOR = (255, 0, 0)  
 BACKGROUND_COLOR = (0, 0, 0)
-
 
 class Snake:
     def __init__(self, color, start_x, start_y):
@@ -23,13 +22,13 @@ class Snake:
     def move(self):
         x, y = self.body[0]
         if self.direction == "up":
-            y -= SPACE_SIZE
+            y -= BODY_SNAKE
         elif self.direction == "down":
-            y += SPACE_SIZE
+            y += BODY_SNAKE
         elif self.direction == "left":
-            x -= SPACE_SIZE
+            x -= BODY_SNAKE
         elif self.direction == "right":
-            x += SPACE_SIZE
+            x += BODY_SNAKE
 
         new_head = [x, y]
         self.body.insert(0, new_head)
@@ -58,23 +57,22 @@ class Snake:
     def draw(self, ctx):
         for segment in self.body:
             x, y = segment
-            ctx.rectangle(x, y, SPACE_SIZE, SPACE_SIZE)
-            ctx.set_source_rgb(*[c / 255 for c in self.color])
+            ctx.rectangle(x, y, BODY_SNAKE, BODY_SNAKE)
+            ctx.set_source_rgb(*[c / 1 for c in self.color])
             ctx.fill()
 
 class Food:
     def __init__(self):
         self.position = [
-            random.randint(0, (GAME_WIDTH // SPACE_SIZE) - 1) * SPACE_SIZE,
-            random.randint(0, (GAME_HEIGHT // SPACE_SIZE) - 1) * SPACE_SIZE,
+            random.randint(0, (GAME_WIDTH // BODY_SNAKE) - 1) * BODY_SNAKE,
+            random.randint(0, (GAME_HEIGHT // BODY_SNAKE) - 1) * BODY_SNAKE,
         ]
 
     def draw(self, ctx):
         x, y = self.position
-        ctx.arc(x + SPACE_SIZE / 2, y + SPACE_SIZE / 2, SPACE_SIZE / 2, 0, 2 * 3.14159)
+        ctx.arc(x + BODY_SNAKE / 2, y + BODY_SNAKE / 2, BODY_SNAKE / 2, 0, 2 * 3.14159)
         ctx.set_source_rgb(*[c / 255 for c in FOOD_COLOR])
         ctx.fill()
-
 
 def main():
     pygame.init()
@@ -126,8 +124,8 @@ def main():
 
         if paused:
             screen.fill(BACKGROUND_COLOR)
-            font = pygame.font.SysFont("calibri", 40)
-            text = font.render("Tekan SPASI Untuk Start" if not winner else f"{winner} Wins!", True, (255, 255, 255))
+            font = pygame.font.SysFont("calibri", 35)
+            text = font.render("Tekan SPASI Untuk Start" if not winner else f"{winner} Wins! Tekan Spasi untuk mulai ulang", True, (255, 255, 255))
             screen.blit(text, (GAME_WIDTH // 2 - text.get_width() // 2, GAME_HEIGHT // 2 - text.get_height() // 2))
             pygame.display.flip()
             clock.tick(60)
@@ -136,6 +134,7 @@ def main():
         snake1.move()
         snake2.move()
 
+        #ketika makan 
         if snake1.body[0] == food.position:
             snake1.grow()
             food = Food()
@@ -143,6 +142,7 @@ def main():
             snake2.grow()
             food = Food()
 
+        #collision 
         if snake1.check_collision(snake2):
             winner = "Player 2"
             paused = True
@@ -150,11 +150,9 @@ def main():
             winner = "Player 1"
             paused = True
 
-        # Clear canvas
         ctx.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT)
         ctx.set_source_rgb(*[c / 255 for c in BACKGROUND_COLOR])
         ctx.fill()
-
         food.draw(ctx)
         snake1.draw(ctx)
         snake2.draw(ctx)
